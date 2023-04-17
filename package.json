@@ -1,0 +1,25 @@
+{
+  "name": "customer-validator",
+  "version": "1.0.0",
+  "description": "Validates customer data and returns eligibility, reasons for ineligibility and other information",
+  "main": "server.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LucasGeddy/customer-validator.git"
+  },
+  "author": "Lucas Estima Sussermann",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/LucasGeddy/customer-validator/issues"
+  },
+  "homepage": "https://github.com/LucasGeddy/customer-validator#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0"
+  }
+}
