@@ -1,4 +1,3 @@
-const util = require('util');
 const cpfRegex = new RegExp('^\\d{11}$');
 
 const cnpjRegex = new RegExp('^\\d{14}$');
@@ -17,19 +16,55 @@ const modalidadesTarifarias = ['azul', 'branca', 'verde', 'convencional']
 
 function validateRequest(req, res, next) {
     const dadosConsumidor = req.body;
+    let erros = [];
 
-    if (typeof(dadosConsumidor) !== 'object' ||
-        !dadosConsumidor.numeroDoDocumento ||
-        !(cpfRegex.test(dadosConsumidor.numeroDoDocumento) || cnpjRegex.test(dadosConsumidor.numeroDoDocumento)) ||
-        !dadosConsumidor.tipoDeConexao ||
-        !tiposDeConexao.includes(dadosConsumidor.tipoDeConexao) ||
-        !dadosConsumidor.classeDeConsumo ||
-        !classesDeConsumo.includes(dadosConsumidor.classeDeConsumo) ||
-        !dadosConsumidor.modalidadeTarifaria ||
-        !modalidadesTarifarias.includes(dadosConsumidor.modalidadeTarifaria) ||
-        !dadosConsumidor.historicoDeConsumo ||
-        dadosConsumidor.historicoDeConsumo.length < 3 || dadosConsumidor.historicoDeConsumo.length > 12)
-        return res.status(400).json({ message: 'Dados inválidos.' });
+    if (!validateRequiredFields(dadosConsumidor))
+        erros.push('Dados obrigatórios não foram preenchidos');
+
+    if (!validateFieldTypes(dadosConsumidor))
+        erros.push('Tipo dos dados inválido');
+
+    if (!validateDocument(dadosConsumidor))
+        erros.push('Número do documento inválido');
+
+    if (!validateEnumContents(dadosConsumidor))
+        erros.push('Valores de Tipo de Conexão, Classe de Consumo ou Modalidade Tarifária inválidos');
+
+    if (!validateHistory(dadosConsumidor))
+        erros.push('Histórico de consumo inválido');
+
+    if (erros.length > 0)
+        return res.status(400).json({ errors: erros });
+    
+    next();
+}
+
+const validateRequiredFields = (dadosConsumidor) =>
+    (dadosConsumidor.numeroDoDocumento &&
+     dadosConsumidor.tipoDeConexao &&
+     dadosConsumidor.classeDeConsumo &&
+     dadosConsumidor.modalidadeTarifaria &&
+     dadosConsumidor.historicoDeConsumo);
+
+const validateFieldTypes = (dadosConsumidor) =>
+    (typeof(dadosConsumidor) === 'object' &&
+     typeof(dadosConsumidor.numeroDoDocumento) === 'string' &&
+     typeof(dadosConsumidor.tipoDeConexao) === 'string' &&
+     typeof(dadosConsumidor.classeDeConsumo) === 'string' &&
+     typeof(dadosConsumidor.modalidadeTarifaria) === 'string' &&
+     Array.isArray(dadosConsumidor.historicoDeConsumo));
+
+const validateDocument = (dadosConsumidor) =>
+    (cpfRegex.test(dadosConsumidor.numeroDoDocumento) || cnpjRegex.test(dadosConsumidor.numeroDoDocumento));
+
+const validateEnumContents = (dadosConsumidor) =>
+    (tiposDeConexao.includes(dadosConsumidor.tipoDeConexao) &&
+    classesDeConsumo.includes(dadosConsumidor.classeDeConsumo) &&
+    modalidadesTarifarias.includes(dadosConsumidor.modalidadeTarifaria));
+
+const validateHistory = (dadosConsumidor) => {
+    if (dadosConsumidor.historicoDeConsumo.length < 3 || dadosConsumidor.historicoDeConsumo.length > 12)
+        return false;
 
     let validRequest = true;
     dadosConsumidor.historicoDeConsumo.forEach(consumo => {
@@ -40,10 +75,7 @@ function validateRequest(req, res, next) {
         }
     });
 
-    if (!validRequest)
-        return res.status(400).json({ message: 'Dados inválidos.' });
-    
-    next();
+    return validRequest;
 }
 
 module.exports = validateRequest;

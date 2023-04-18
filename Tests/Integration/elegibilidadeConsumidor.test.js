@@ -1,27 +1,26 @@
-const postEligibilidadeConsumidor = require('../../src/API/elegibilidadeConsumidorService');
+const request = require('supertest');
+const app = require('../../src/app');
 
 describe('ElegibilidadeConsumidorEndpoint', () => {
-    it('Should return false eligibility with all reasons', () => {
-        const requisicaoConsumidorInelegivel = {
-            body: {
-                "numeroDoDocumento": "14041737706",
-                "tipoDeConexao": "bifasico",
-                "classeDeConsumo": "rural",
-                "modalidadeTarifaria": "verde",
-                "historicoDeConsumo": [
-                    500, // mes atual
-                    300, // mes anterior
-                    400, // 2 meses atras
-                    501, // 3 meses atras
-                    409, // 4 meses atras
-                    500, // 5 meses atras
-                    500, // 6 meses atras
-                    500, // 7 meses atras
-                    450, // 8 meses atras
-                    409, // 9 meses atras
-                ]
-            }
-        };
+    it('Should return false eligibility with all reasons', async () => {
+        const dadosConsumidorInelegivel = {
+            "numeroDoDocumento": "14041737706",
+            "tipoDeConexao": "bifasico",
+            "classeDeConsumo": "rural",
+            "modalidadeTarifaria": "verde",
+            "historicoDeConsumo": [
+              500, // mes atual
+              500, // mes anterior
+              500, // 2 meses atras
+              500, // 3 meses atras
+              500, // 4 meses atras
+              500, // 5 meses atras
+              500, // 6 meses atras
+              500, // 7 meses atras
+              500, // 8 meses atras
+              500, // 9 meses atras
+            ]
+        }
 
         const respostaEsperada = {
             elegivel: false,
@@ -31,13 +30,14 @@ describe('ElegibilidadeConsumidorEndpoint', () => {
                     "Consumo muito baixo para tipo de conexão"
             ]
         };
-
-        const result = postEligibilidadeConsumidor({ body: requisicaoConsumidorInelegivel });
-
-        expect(result.staus).toEqual(200);
-        expect(result.body).toEqual(respostaEsperada);
+        const response = await request(app)
+            .post('/validate-customer')
+            .send(dadosConsumidorInelegivel);
+        
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual(respostaEsperada);
     });
-    it('Should return true eligibility with correct estimated carbon economy', () => {
+    it('Should return true eligibility with correct estimated carbon economy', async () => {
         const dadosConsumidorElegivel = {
             "numeroDoDocumento": "14041737706",
             "tipoDeConexao": "bifasico",
@@ -64,9 +64,50 @@ describe('ElegibilidadeConsumidorEndpoint', () => {
             economiaAnualDeCO2: 5553.24
         };
 
-        const result = postEligibilidadeConsumidor({ body: dadosConsumidorElegivel});
+        const response = await request(app)
+            .post('/validate-customer')
+            .send(dadosConsumidorElegivel);
+        
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual(respostaEsperada);
+    });
+    it('Should return bad request with correct errors when missing required field, document with wrong length,' +
+       'field with wrong type, bad value on history', async () => {
+        const dadosConsumidorElegivel = {
+            "numeroDoDocumento": "123",
+            "tipoDeConexao": [ "bifasico", "trifasico" ],
+            "modalidadeTarifaria": "diferente",
+            "historicoDeConsumo": [
+              3878, // mes atual
+              9760, // mes anterior
+              0, // 2 meses atras
+              2797, // 3 meses atras
+              2481, // 4 meses atras
+              5731, // 5 meses atras
+              7538, // 6 meses atras
+              4392, // 7 meses atras
+              7859, // 8 meses atras
+              4160, // 9 meses atras
+              6941, // 10 meses atras
+              4597  // 11 meses atras
+            ]
+          }
 
-        expect(result.status).toEqual(200);
-        expect(result.body).toEqual(respostaEsperada);
+        const respostaEsperada = {
+            errors: [
+                'Dados obrigatórios não foram preenchidos',
+                'Tipo dos dados inválido',
+                'Número do documento inválido',
+                'Valores de Tipo de Conexão, Classe de Consumo ou Modalidade Tarifária inválidos',
+                'Histórico de consumo inválido'
+            ]
+        };
+
+        const response = await request(app)
+            .post('/validate-customer')
+            .send(dadosConsumidorElegivel);
+        
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual(respostaEsperada);
     });
 });

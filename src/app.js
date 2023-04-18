@@ -7,7 +7,7 @@ class AppController {
         this.express = express();
         
         this.express.use(express.json());
-        this.express.post('/', 
+        this.express.post('/validate-customer', 
             (req, res, next) => requestValidator(req, res, next), 
             (req, res) => validarElegibilidadeConsumidor(req, res)
         );
